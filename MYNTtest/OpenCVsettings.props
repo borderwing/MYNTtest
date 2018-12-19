@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);C:\opencv\opencv\include;C:\opencv\opencv\include\opencv;C:\opencv\opencv\include\opencv2</IncludePath>
+    <LibraryPath>C:\opencv\x64\vc15\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>opencv_calib3d341.lib;opencv_core341.lib;opencv_dnn341.lib;opencv_features2d341.lib;opencv_flann341.lib;opencv_highgui341.lib;opencv_imgcodecs341.lib;opencv_imgproc341.lib;opencv_ml341.lib;opencv_objdetect341.lib;opencv_photo341.lib;opencv_shape341.lib;opencv_stitching341.lib;opencv_superres341.lib;opencv_video341.lib;opencv_videoio341.lib;opencv_videostab341.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>
