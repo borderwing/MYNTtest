@@ -6,6 +6,8 @@
 
 #include "mynteye/api.h"
 
+#include <fstream>
+
 //#include "util/cv_painter.h"
 //#include "util/pc_viewer.h"
 
@@ -205,10 +207,22 @@ cv::Mat ConvertToBinary(cv::Mat in) {
 	return out;
 }
 
-bool GetFeaturePoints(std::vector<cv::Point> &pts) {
-
+bool GetFeaturePoints(cv::Mat in, std::vector<cv::Point> &pts) {
+	cv::findNonZero(in, pts);
+	//std::cout << "white: " << std::endl;
+	return true;
 }
 
+void OutputPts(std::vector<cv::Point> &pts) {
+	std::ofstream saveFile;
+	saveFile.open("test.txt");
+	int size = pts.size();
+	for (int i = 0; i < size; i++) {
+		saveFile << "x: " + std::to_string(pts[i].x) << " " << " y:" + std::to_string(pts[i].y) << std::endl;
+	}
+	saveFile << "total: " << size << std::endl;
+	saveFile.close();
+}
 
 MYNTEYE_USE_NAMESPACE
 
@@ -224,9 +238,9 @@ int main(int argc, char *argv[]) {
 
 	api->Start(Source::VIDEO_STREAMING);
 
-	cv::namedWindow("frame");
+	//cv::namedWindow("frame");
 	cv::namedWindow("depth");
-	cv::namedWindow("region");
+	//cv::namedWindow("region");
 
 	DepthRegion depth_region(3);
 	auto depth_info = [](
@@ -240,6 +254,8 @@ int main(int argc, char *argv[]) {
 
 	//CVPainter painter;
 	//PCViewer pcviewer;
+	
+	int i = 0;
 
 	while (true) {
 		api->WaitForStreams();
@@ -247,8 +263,8 @@ int main(int argc, char *argv[]) {
 		auto &&left_data = api->GetStreamData(Stream::LEFT);
 		auto &&right_data = api->GetStreamData(Stream::RIGHT);
 
-		cv::Mat img;
-		cv::hconcat(left_data.frame, right_data.frame, img);
+		//cv::Mat img;
+		//cv::hconcat(left_data.frame, right_data.frame, img);
 
 		cv::Mat img_left;
 		cv::Mat img_right;
@@ -264,12 +280,25 @@ int main(int argc, char *argv[]) {
 		img_left_operated = ConvertToBinary(img_left);
 		img_right_operated = ConvertToBinary(img_right);
 
-		cv::imshow("left", img_left_operated);
-		cv::imshow("right", img_right_operated);
+		cv::imshow("left_operated", img_left_operated);
+		cv::imshow("right_operated", img_right_operated);
+
+		if (i < 50) {
+			i++;		
+		}
+		else if( i == 50){
+			i++;
+			std::vector<cv::Point> pts;
+			GetFeaturePoints(img_right_operated, pts);
+			OutputPts(pts);
+		}
+		else {
+			
+		}
 
 		//painter.DrawImgData(img, *left_data.img);
 
-		cv::imshow("frame", img);
+		//cv::imshow("frame", img);
 
 		auto &&disp_data = api->GetStreamData(Stream::DISPARITY_NORMALIZED);
 		auto &&depth_data = api->GetStreamData(Stream::DEPTH);
@@ -299,6 +328,7 @@ int main(int argc, char *argv[]) {
 			},
 				80, depth_info);
 			std::cout << depth_region.GetDepth(depth_data.frame) << std::endl;
+			std::cout << depth_data.frame.size()<<std::endl;
 		}
 
 		//auto &&points_data = api->GetStreamData(Stream::POINTS);
