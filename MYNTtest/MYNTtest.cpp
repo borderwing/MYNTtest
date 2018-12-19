@@ -111,6 +111,69 @@ namespace {
 			cv::imshow("region", im);
 		}
 
+		//template <typename ushort>
+		ushort GetDepthHelp(
+			const cv::Mat &depth,
+			cv::Point point
+		) {
+			int x = point.x;
+			int y = point.y;
+			return depth.at<ushort>(y, x);
+		}
+		ushort GetDepth(const cv::Mat &depth) {
+			return GetDepthHelp(depth, point_);
+		}
+
+		
+
+		template <typename T>
+		void GetDepthWithGraph(
+			const cv::Mat &depth,
+			std::function<std::string(const T &elem)> elem2string,
+			int elem_space = 40,
+			std::function<std::string(
+				const cv::Mat &depth, const cv::Point &point, const std::uint32_t &n)>
+			getinfo = nullptr) {
+			if (!show_)
+				return;
+
+			int space = std::move(elem_space);
+			int n = 2 * n_ + 1;
+			cv::Mat im(space * n, space * n, CV_8UC3, cv::Scalar(255, 255, 255));
+
+			int x, y;
+			std::string str;
+			int baseline = 0;
+
+			x = point_.x;
+			y = point_.y;
+			str = elem2string(depth.at<T>(y, x));
+			cv::Scalar color = cv::Scalar(0, 0, 255);
+			cv::Size sz =
+				cv::getTextSize(str, cv::FONT_HERSHEY_PLAIN, 1, 1, &baseline);
+
+			cv::putText(
+				im, str, cv::Point(
+				(n_) * space + (space - sz.width) / 2,
+				(n_) * space + (space + sz.height) / 2),
+				cv::FONT_HERSHEY_PLAIN, 1, color, 1);
+
+
+			if (getinfo) {
+				std::string info = getinfo(depth, point_, n_);
+				if (!info.empty()) {
+					cv::Size sz =
+						cv::getTextSize(info, cv::FONT_HERSHEY_PLAIN, 1, 1, &baseline);
+
+					cv::putText(
+						im, info, cv::Point(5, 5 + sz.height), cv::FONT_HERSHEY_PLAIN, 1,
+						cv::Scalar(255, 0, 255), 1);
+				}
+			}
+
+			cv::imshow("test", im);
+		}
+
 		void DrawRect(cv::Mat &image) {  // NOLINT
 			if (!show_)
 				return;
@@ -140,6 +203,10 @@ cv::Mat ConvertToBinary(cv::Mat in) {
 	cv::Mat out;
 	out = in > 128;
 	return out;
+}
+
+bool GetFeaturePoints(std::vector<cv::Point> &pts) {
+
 }
 
 
@@ -222,33 +289,25 @@ int main(int argc, char *argv[]) {
 
 			cv::imshow("depth", depth_frame);
 
-			depth_region.ShowElems<ushort>(
+			depth_region.GetDepthWithGraph<ushort>(
 				depth_data.frame,
 				[](const ushort &elem) {
 				if (elem >= 10000) {
-					// Filter errors, or limit to valid range.
-					//
-					// reprojectImageTo3D(), missing values will set to 10000
-					//   https://docs.opencv.org/master/d9/d0c/group__calib3d.html#ga1bc1152bd57d63bc524204f21fde6e02
 					return std::string("invalid");
 				}
 				return std::to_string(elem);
 			},
 				80, depth_info);
+			std::cout << depth_region.GetDepth(depth_data.frame) << std::endl;
 		}
 
-		auto &&points_data = api->GetStreamData(Stream::POINTS);
-		if (!points_data.frame.empty()) {
-			//pcviewer.Update(points_data.frame);
-		}
+		//auto &&points_data = api->GetStreamData(Stream::POINTS);
 
 		char key = static_cast<char>(cv::waitKey(1));
 		if (key == 27 || key == 'q' || key == 'Q') {  // ESC/Q
 			break;
 		}
-		//if (pcviewer.WasStopped()) {
-		//	break;
-		//}
+
 	}
 
 	api->Stop(Source::VIDEO_STREAMING);
