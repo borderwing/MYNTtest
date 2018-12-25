@@ -240,3 +240,6 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+/MYNTtest/capture_1.txt
+/MYNTtest/capture_2.txt
+/MYNTtest/test.txt

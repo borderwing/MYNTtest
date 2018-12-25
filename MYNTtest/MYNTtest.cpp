@@ -126,7 +126,7 @@ namespace {
 			return GetDepthHelp(depth, point_);
 		}
 
-		
+
 
 		template <typename T>
 		void GetDepthWithGraph(
@@ -203,7 +203,7 @@ namespace {
 
 cv::Mat ConvertToBinary(cv::Mat in) {
 	cv::Mat out;
-	out = in > 128;
+	out = in > 200;
 	return out;
 }
 
@@ -213,16 +213,25 @@ bool GetFeaturePoints(cv::Mat in, std::vector<cv::Point> &pts) {
 	return true;
 }
 
-void OutputPts(std::vector<cv::Point> &pts) {
+int GetDepth(
+	const cv::Mat &depth,
+	cv::Point pt) {
+	return (depth.at<ushort>(pt.y, pt.x));
+}
+
+void OutputPts(const cv::Mat &depth, std::vector<cv::Point> &pts, std::string fileName) {
 	std::ofstream saveFile;
-	saveFile.open("test.txt");
+	saveFile.open(fileName + ".txt");
 	int size = pts.size();
 	for (int i = 0; i < size; i++) {
-		saveFile << "x: " + std::to_string(pts[i].x) << " " << " y:" + std::to_string(pts[i].y) << std::endl;
+		int ret = GetDepth(depth, pts[i]);
+		saveFile << "x: " + std::to_string(pts[i].x) << " " << " y:" + std::to_string(pts[i].y)<<" depth: "<< ret << std::endl;
 	}
 	saveFile << "total: " << size << std::endl;
 	saveFile.close();
 }
+
+
 
 MYNTEYE_USE_NAMESPACE
 
@@ -283,18 +292,7 @@ int main(int argc, char *argv[]) {
 		cv::imshow("left_operated", img_left_operated);
 		cv::imshow("right_operated", img_right_operated);
 
-		if (i < 50) {
-			i++;		
-		}
-		else if( i == 50){
-			i++;
-			std::vector<cv::Point> pts;
-			GetFeaturePoints(img_right_operated, pts);
-			OutputPts(pts);
-		}
-		else {
-			
-		}
+
 
 		//painter.DrawImgData(img, *left_data.img);
 
@@ -327,17 +325,27 @@ int main(int argc, char *argv[]) {
 				return std::to_string(elem);
 			},
 				80, depth_info);
-			std::cout << depth_region.GetDepth(depth_data.frame) << std::endl;
-			std::cout << depth_data.frame.size()<<std::endl;
+			//std::cout << depth_region.GetDepth(depth_data.frame) << std::endl;
+			//std::cout << depth_data.frame.size()<<std::endl;
 		}
 
 		//auto &&points_data = api->GetStreamData(Stream::POINTS);
 
 		char key = static_cast<char>(cv::waitKey(1));
+
+
+		if (key == 'z' || key == 'Z') {  // z/Z
+			i++;
+			std::vector<cv::Point> pts;
+			GetFeaturePoints(img_right_operated, pts);
+			OutputPts(depth_data.frame, pts, "capture_" + std::to_string(i));
+			std::cout << "captured: "<< pts.size() << std::endl;
+		}
+
 		if (key == 27 || key == 'q' || key == 'Q') {  // ESC/Q
 			break;
 		}
-
+		
 	}
 
 	api->Stop(Source::VIDEO_STREAMING);
