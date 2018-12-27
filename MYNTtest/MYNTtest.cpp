@@ -8,6 +8,8 @@
 
 #include <fstream>
 
+#include <cmath>
+
 //#include "util/cv_painter.h"
 //#include "util/pc_viewer.h"
 
@@ -213,25 +215,168 @@ bool GetFeaturePoints(cv::Mat in, std::vector<cv::Point> &pts) {
 	return true;
 }
 
+bool CheckConnection(cv::Point p1, cv::Point p2) {
+	if (abs(p1.x - p2.x) <= 1 && abs(p1.y - p2.y) <= 1) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+void GetAdjPts(cv::Point pt, std::vector<cv::Point> &pts) {
+	// lu
+	cv::Point lu;
+	lu.x = pt.x - 1;
+	lu.y = pt.y + 1;
+	pts.push_back(lu);
+
+	// u
+	cv::Point u;
+	u.x = pt.x;
+	u.y = pt.y + 1;
+	pts.push_back(u);
+
+	//ru
+	cv::Point ru;
+	ru.x = pt.x + 1;
+	ru.y = pt.y + 1;
+	pts.push_back(ru);
+
+	//l
+	cv::Point l;
+	l.x = pt.x - 1;
+	l.y = pt.y ;
+	pts.push_back(l);
+
+	//r
+	cv::Point r;
+	r.x = pt.x + 1;
+	r.y = pt.y;
+	pts.push_back(r);
+
+	//ld
+	cv::Point ld;
+	ld.x = pt.x - 1;
+	ld.y = pt.y - 1;
+	pts.push_back(ld);
+
+	//d
+	cv::Point d;
+	d.x = pt.x;
+	d.y = pt.y - 1;
+	pts.push_back(d);
+
+	//rd
+	cv::Point rd;
+	rd.x = pt.x + 1;
+	rd.y = pt.y - 1;
+	pts.push_back(rd);
+}
+
+
+void SearchPts(cv::Point pt, std::vector<std::vector<cv::Point>> &group, int index, std::vector<cv::Point> &total) {
+	if (index == -1) {
+		index = group.size();
+	}
+	std::vector<cv::Point> pts;
+	GetAdjPts(pt, pts);
+	for (int i = 0; i < pts.size(); i++) {
+		
+		std::vector<cv::Point>::iterator it = find(total.begin(), total.end(), pts[i]);
+		if (it == total.end()) {
+		}
+		else {
+			std::cout << index << std::endl;
+			if (group.size() == index) {
+				std::vector<cv::Point> newVec;
+				group.push_back(newVec);
+			}
+			group[index].push_back(pts[i]);
+			total.erase(it);
+			//std::remove(total.begin(), total.end(), it);
+			SearchPts(pts[i], group, index, total);
+		}
+	}
+}
+
+
 int GetDepth(
 	const cv::Mat &depth,
 	cv::Point pt) {
 	return (depth.at<ushort>(pt.y, pt.x));
 }
 
+void DeleteUselessPt(const cv::Mat &depth, std::vector<cv::Point> &pts) {
+	//std::vector<cv::Point>::iterator it;
+	auto it = pts.begin();
+	while (it != pts.end()) {
+		int ret = GetDepth(depth, *it);
+		if (ret >= 5000) {
+			it = pts.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+}
+
 void OutputPts(const cv::Mat &depth, std::vector<cv::Point> &pts, std::string fileName) {
 	std::ofstream saveFile;
 	saveFile.open(fileName + ".txt");
 	int size = pts.size();
+
 	for (int i = 0; i < size; i++) {
 		int ret = GetDepth(depth, pts[i]);
 		saveFile << "x: " + std::to_string(pts[i].x) << " " << " y:" + std::to_string(pts[i].y)<<" depth: "<< ret << std::endl;
 	}
 	saveFile << "total: " << size << std::endl;
+
+	saveFile << "   " << std::endl;
+
+	auto it = pts.begin();
+	while (it != pts.end()) {
+		int ret = GetDepth(depth, *it);
+		if (ret >= 5000) {
+			it = pts.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+
+	//DeleteUselessPt(depth, pts);
+
+	std::vector<std::vector<cv::Point>> vecs;
+
+	while (pts.size() != 0) {
+		SearchPts(pts[0], vecs, -1, pts);
+	}
+
+	for (int i = 0; i < vecs.size(); i++) {
+		float xSum = 0;
+		float ySum = 0;
+		float retSum = 0;
+		for (int j = 0; j < vecs[i].size(); j++) {
+
+			int ret = GetDepth(depth, vecs[i][j]);
+
+			saveFile << "x: " + std::to_string(vecs[i][j].x) << " " << " y:" + std::to_string(vecs[i][j].y) << " depth: " << ret << std::endl;
+			xSum += vecs[i][j].x;
+			ySum += vecs[i][j].y;
+			retSum += ret;
+		}
+		saveFile << (xSum / vecs[i].size()) <<" "<< (ySum / vecs[i].size())<<" "<< (retSum / vecs[i].size()) << std::endl;
+		saveFile << "   " << std::endl;
+	}
+
+
 	saveFile.close();
 }
 
-
+// TO DO:
+// Seperate dots and combine to groups
+// Get the center point of a group
 
 MYNTEYE_USE_NAMESPACE
 
