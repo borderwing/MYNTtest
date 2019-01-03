@@ -225,6 +225,7 @@ bool CheckConnection(cv::Point p1, cv::Point p2) {
 }
 
 void GetAdjPts(cv::Point pt, std::vector<cv::Point> &pts) {
+	pts.clear();
 	// lu
 	cv::Point lu;
 	lu.x = pt.x - 1;
@@ -272,30 +273,52 @@ void GetAdjPts(cv::Point pt, std::vector<cv::Point> &pts) {
 	rd.x = pt.x + 1;
 	rd.y = pt.y - 1;
 	pts.push_back(rd);
+
+	int p = pts.size();
+	int q = p;
 }
 
 
 void SearchPts(cv::Point pt, std::vector<std::vector<cv::Point>> &group, int index, std::vector<cv::Point> &total) {
+	int newindex = index;
 	if (index == -1) {
-		index = group.size();
+		newindex = group.size();
 	}
-	std::vector<cv::Point> pts;
+	std::vector<cv::Point> pts(8);	
 	GetAdjPts(pt, pts);
 	for (int i = 0; i < pts.size(); i++) {
 		
 		std::vector<cv::Point>::iterator it = find(total.begin(), total.end(), pts[i]);
 		if (it == total.end()) {
-		}
+			if(i == pts.size() - 1) {
+				std::cout << newindex << std::endl;
+				if (group.size() == newindex) {
+					std::vector<cv::Point> newVec;
+					group.push_back(newVec);
+				}
+				group[newindex].push_back(pt);
+				//total.erase(pt);
+				for (std::vector<cv::Point>::iterator ptit = total.begin(); ptit != total.end();) {
+					if ( *ptit == pt) {
+						ptit = total.erase(ptit);
+						//break;
+					}
+					else {
+						ptit++;
+					}
+				}
+			}
+		}	
 		else {
-			std::cout << index << std::endl;
-			if (group.size() == index) {
+			std::cout << newindex << std::endl;
+			if (group.size() == newindex) {
 				std::vector<cv::Point> newVec;
 				group.push_back(newVec);
 			}
-			group[index].push_back(pts[i]);
+			group[newindex].push_back(pts[i]);
 			total.erase(it);
 			//std::remove(total.begin(), total.end(), it);
-			SearchPts(pts[i], group, index, total);
+			SearchPts(pts[i], group, newindex, total);
 		}
 	}
 }
