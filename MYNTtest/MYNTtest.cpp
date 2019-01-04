@@ -224,6 +224,7 @@ bool CheckConnection(cv::Point p1, cv::Point p2) {
 	}
 }
 
+// Get adj pts from 8 direction
 void GetAdjPts(cv::Point pt, std::vector<cv::Point> &pts) {
 	pts.clear();
 	// lu
@@ -278,35 +279,42 @@ void GetAdjPts(cv::Point pt, std::vector<cv::Point> &pts) {
 	int q = p;
 }
 
-// TO DO:
 // Seperate dots and combine to groups
 // Get the center point of a group
+// using dfs
 // Done
-
-
 
 void SearchPts(cv::Point pt, std::vector<std::vector<cv::Point>> &group, int index, std::vector<cv::Point> &total) {
 
+	// check if push back into vec
 	bool isPush = false;
 
+	// get adj pts
 	std::vector<cv::Point> pts(8);	
 	GetAdjPts(pt, pts);
+
 	for (int i = 0; i < pts.size(); i++) {
 		if (total.size() != 0) {
 
+			// search adj pts in total
 			std::vector<cv::Point>::iterator it = find(total.begin(), total.end(), pts[i]);
 			if (it == total.end()) {
+
+				// check if this is the last one
 				if (i == pts.size() - 1 && isPush == false) {
 
+					// update index
 					if (index == -1) {
 						index = group.size();
 						std::vector<cv::Point> newVec;
 						group.push_back(newVec);
 					}
 
+					// push back pt
 					group[index].push_back(pt);
 					isPush = true;
 
+					// delete pt from total
 					std::vector<cv::Point>::iterator ptit = find(total.begin(), total.end(), pt);
 					if (ptit != total.end()) {
 						total.erase(ptit);
@@ -317,21 +325,26 @@ void SearchPts(cv::Point pt, std::vector<std::vector<cv::Point>> &group, int ind
 			}
 			else {
 
+				// update index
 				if (index == -1) {
 					index = group.size();
 					std::vector<cv::Point> newVec;
 					group.push_back(newVec);
 				}
+
+				// push back pt
 				if (isPush == false) {
 					group[index].push_back(pt);
 					isPush = true;
 				}
 
+				// delete pt from total
 				std::vector<cv::Point>::iterator ptit = find(total.begin(), total.end(), pt);
 				if (ptit != total.end()) {
 					total.erase(ptit);
 				}
 
+				// search adj pts in next round
 				SearchPts(pts[i], group, index, total);
 			}
 		}
@@ -371,17 +384,6 @@ void OutputPts(const cv::Mat &depth, std::vector<cv::Point> &pts, std::string fi
 	saveFile << "total: " << size << std::endl;
 
 	saveFile << "   " << std::endl;
-
-	/*auto it = pts.begin();
-	while (it != pts.end()) {
-		int ret = GetDepth(depth, *it);
-		if (ret >= 10000) {
-			it = pts.erase(it);
-		}
-		else {
-			++it;
-		}
-	}*/
 
 	DeleteUselessPt(depth, pts);
 
