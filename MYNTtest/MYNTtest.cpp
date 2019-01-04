@@ -278,47 +278,62 @@ void GetAdjPts(cv::Point pt, std::vector<cv::Point> &pts) {
 	int q = p;
 }
 
+// TO DO:
+// Seperate dots and combine to groups
+// Get the center point of a group
+// Done
+
+
 
 void SearchPts(cv::Point pt, std::vector<std::vector<cv::Point>> &group, int index, std::vector<cv::Point> &total) {
-	int newindex = index;
-	if (index == -1) {
-		newindex = group.size();
-	}
+
+	bool isPush = false;
+
 	std::vector<cv::Point> pts(8);	
 	GetAdjPts(pt, pts);
 	for (int i = 0; i < pts.size(); i++) {
-		
-		std::vector<cv::Point>::iterator it = find(total.begin(), total.end(), pts[i]);
-		if (it == total.end()) {
-			if(i == pts.size() - 1) {
-				std::cout << newindex << std::endl;
-				if (group.size() == newindex) {
+		if (total.size() != 0) {
+
+			std::vector<cv::Point>::iterator it = find(total.begin(), total.end(), pts[i]);
+			if (it == total.end()) {
+				if (i == pts.size() - 1 && isPush == false) {
+
+					if (index == -1) {
+						index = group.size();
+						std::vector<cv::Point> newVec;
+						group.push_back(newVec);
+					}
+
+					group[index].push_back(pt);
+					isPush = true;
+
+					std::vector<cv::Point>::iterator ptit = find(total.begin(), total.end(), pt);
+					if (ptit != total.end()) {
+						total.erase(ptit);
+					}
+				}
+				else {
+				}
+			}
+			else {
+
+				if (index == -1) {
+					index = group.size();
 					std::vector<cv::Point> newVec;
 					group.push_back(newVec);
 				}
-				group[newindex].push_back(pt);
-				//total.erase(pt);
-				for (std::vector<cv::Point>::iterator ptit = total.begin(); ptit != total.end();) {
-					if ( *ptit == pt) {
-						ptit = total.erase(ptit);
-						//break;
-					}
-					else {
-						ptit++;
-					}
+				if (isPush == false) {
+					group[index].push_back(pt);
+					isPush = true;
 				}
+
+				std::vector<cv::Point>::iterator ptit = find(total.begin(), total.end(), pt);
+				if (ptit != total.end()) {
+					total.erase(ptit);
+				}
+
+				SearchPts(pts[i], group, index, total);
 			}
-		}	
-		else {
-			std::cout << newindex << std::endl;
-			if (group.size() == newindex) {
-				std::vector<cv::Point> newVec;
-				group.push_back(newVec);
-			}
-			group[newindex].push_back(pts[i]);
-			total.erase(it);
-			//std::remove(total.begin(), total.end(), it);
-			SearchPts(pts[i], group, newindex, total);
 		}
 	}
 }
@@ -331,11 +346,11 @@ int GetDepth(
 }
 
 void DeleteUselessPt(const cv::Mat &depth, std::vector<cv::Point> &pts) {
-	//std::vector<cv::Point>::iterator it;
+
 	auto it = pts.begin();
 	while (it != pts.end()) {
 		int ret = GetDepth(depth, *it);
-		if (ret >= 5000) {
+		if (ret >= 10000) {
 			it = pts.erase(it);
 		}
 		else {
@@ -357,18 +372,18 @@ void OutputPts(const cv::Mat &depth, std::vector<cv::Point> &pts, std::string fi
 
 	saveFile << "   " << std::endl;
 
-	auto it = pts.begin();
+	/*auto it = pts.begin();
 	while (it != pts.end()) {
 		int ret = GetDepth(depth, *it);
-		if (ret >= 5000) {
+		if (ret >= 10000) {
 			it = pts.erase(it);
 		}
 		else {
 			++it;
 		}
-	}
+	}*/
 
-	//DeleteUselessPt(depth, pts);
+	DeleteUselessPt(depth, pts);
 
 	std::vector<std::vector<cv::Point>> vecs;
 
@@ -397,9 +412,6 @@ void OutputPts(const cv::Mat &depth, std::vector<cv::Point> &pts, std::string fi
 	saveFile.close();
 }
 
-// TO DO:
-// Seperate dots and combine to groups
-// Get the center point of a group
 
 MYNTEYE_USE_NAMESPACE
 
