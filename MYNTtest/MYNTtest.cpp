@@ -422,12 +422,23 @@ int main(int argc, char *argv[]) {
 	if (!api)
 		return 1;
 
+	int fps = 25;
+
 	api->SetOptionValue(Option::IR_CONTROL, 80);
+
+	api->SetOptionValue(Option::FRAME_RATE, fps);
+	api->SetOptionValue(Option::IMU_FREQUENCY, 500);
+
 
 	api->EnableStreamData(Stream::DISPARITY_NORMALIZED);
 	api->EnableStreamData(Stream::DEPTH);
 
 	api->Start(Source::VIDEO_STREAMING);
+
+	std::string outFile = "E://ye/output/output.avi";
+
+	auto fourcc = cv::VideoWriter::fourcc('X','V','I','D');;
+	cv::VideoWriter writer;
 
 	//cv::namedWindow("frame");
 	cv::namedWindow("depth");
@@ -443,10 +454,12 @@ int main(int argc, char *argv[]) {
 		return os.str();
 	};
 
-	//CVPainter painter;
+	//CVPainter painter;qqq
 	//PCViewer pcviewer;
 	
 	int i = 0;
+	
+	int frameCount = 0;
 
 	while (true) {
 		api->WaitForStreams();
@@ -465,6 +478,17 @@ int main(int argc, char *argv[]) {
 		cv::imshow("left_frame", img_left);
 		cv::imshow("right_frame", img_right);
 
+		if (writer.isOpened()) {
+			writer.write(img_left);
+			frameCount += 1;
+			std::cout << "write in frame = " << frameCount << std::endl;
+		}
+		else {
+			std::cout << img_left.size() << std::endl;
+			// last parameter should be zero!!!!! this is a gray texture;
+			writer.open(outFile, fourcc, fps, img_left.size(), 0);
+		}
+
 		cv::Mat img_left_operated;
 		cv::Mat img_right_operated;
 
@@ -473,7 +497,6 @@ int main(int argc, char *argv[]) {
 
 		cv::imshow("left_operated", img_left_operated);
 		cv::imshow("right_operated", img_right_operated);
-
 
 
 		//painter.DrawImgData(img, *left_data.img);
@@ -515,7 +538,6 @@ int main(int argc, char *argv[]) {
 
 		char key = static_cast<char>(cv::waitKey(1));
 
-
 		if (key == 'z' || key == 'Z') {  // z/Z
 			i++;
 			std::vector<cv::Point> pts;
@@ -524,12 +546,14 @@ int main(int argc, char *argv[]) {
 			std::cout << "captured: "<< pts.size() << std::endl;
 		}
 
-		if (key == 27 || key == 'q' || key == 'Q') {  // ESC/Q
-			break;
+		if (key == 27 || key == 'q' || key == 'Q') {  // ESC/Q		
+			std::cout << "stop" << std::endl;	
+			break;		
 		}
 		
 	}
-
+	
+	writer.release();
 	api->Stop(Source::VIDEO_STREAMING);
 	return 0;
 }
