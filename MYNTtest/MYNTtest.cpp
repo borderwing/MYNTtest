@@ -414,6 +414,57 @@ void OutputPts(const cv::Mat &depth, std::vector<cv::Point> &pts, std::string fi
 	saveFile.close();
 }
 
+struct videoWriterSettings{
+	std::string prefix;
+	std::string suffix;
+	int videoIndex;
+	int fourcc;
+	int fps;
+	int frameCount;
+	bool isColor;
+};
+
+void StartVideoStreaming(cv::VideoWriter &writer, cv::Mat &img, videoWriterSettings &settings) {
+		settings.frameCount = 0;
+		std::cout << img.size() << std::endl;
+		std::string filePath = settings.prefix + std::to_string(settings.videoIndex) + settings.suffix;
+		// last parameter should be zero!!!!! this is a gray texture;
+		writer.open(filePath, settings.fourcc, settings.fps, img.size(), settings.isColor);
+		std::cout << "start streaming: " << filePath << std::endl;
+		settings.videoIndex ++;
+}
+
+
+void OnVideoStreaming(cv::VideoWriter &writer, cv::Mat &img, videoWriterSettings &settings) {
+	if (writer.isOpened()) {
+		writer.write(img);
+		settings.frameCount += 1;
+		std::cout << "write in frame = " << settings.frameCount << std::endl;
+	}
+}
+
+void EndVideoStreaming(cv::VideoWriter &writer) {
+	writer.release();
+	std::cout << "end streaming" << std::endl;
+}
+
+void SetVideoWriterSettings(
+	videoWriterSettings &settings, 
+	std::string prefix, 
+	std::string suffix, 
+	int videoIndex, 
+	int fourcc, 
+	int fps, 
+	int frameCount, 
+	bool isColor) {
+	settings.prefix = prefix;
+	settings.suffix = suffix;
+	settings.videoIndex = videoIndex;
+	settings.fourcc = fourcc;
+	settings.fps = fps;
+	settings.frameCount = frameCount;
+	settings.isColor = isColor;
+}
 
 MYNTEYE_USE_NAMESPACE
 
@@ -435,14 +486,19 @@ int main(int argc, char *argv[]) {
 
 	api->Start(Source::VIDEO_STREAMING);
 
-	std::string outFile = "E://ye/output/output.avi";
+	// set for video streaming
+	videoWriterSettings settings;
+	std::string outFilePrefix = "E://ye/output/";
+	std::string outFileSuffix = ".avi";
+	int frameCount = 0;
+	int videoIndex = 0;
+	bool isColor = false;
+	auto fourcc = cv::VideoWriter::fourcc('X','V','I','D');
+	SetVideoWriterSettings(settings, outFilePrefix, outFileSuffix, videoIndex, fourcc, fps, frameCount, isColor);
 
-	auto fourcc = cv::VideoWriter::fourcc('X','V','I','D');;
 	cv::VideoWriter writer;
 
-	//cv::namedWindow("frame");
 	cv::namedWindow("depth");
-	//cv::namedWindow("region");
 
 	DepthRegion depth_region(3);
 	auto depth_info = [](
@@ -454,12 +510,7 @@ int main(int argc, char *argv[]) {
 		return os.str();
 	};
 
-	//CVPainter painter;qqq
-	//PCViewer pcviewer;
-	
 	int i = 0;
-	
-	int frameCount = 0;
 
 	while (true) {
 		api->WaitForStreams();
@@ -478,16 +529,18 @@ int main(int argc, char *argv[]) {
 		cv::imshow("left_frame", img_left);
 		cv::imshow("right_frame", img_right);
 
-		if (writer.isOpened()) {
-			writer.write(img_left);
-			frameCount += 1;
-			std::cout << "write in frame = " << frameCount << std::endl;
-		}
-		else {
-			std::cout << img_left.size() << std::endl;
-			// last parameter should be zero!!!!! this is a gray texture;
-			writer.open(outFile, fourcc, fps, img_left.size(), 0);
-		}
+		//if (writer.isOpened()) {
+		//	writer.write(img_left);
+		//	frameCount += 1;
+		//	std::cout << "write in frame = " << frameCount << std::endl;
+		//}
+		//else {
+		//	std::cout << img_left.size() << std::endl;
+		//	// last parameter should be zero!!!!! this is a gray texture;
+		//	writer.open(outFile, fourcc, fps, img_left.size(), 0);
+		//}
+
+		OnVideoStreaming(writer, img_left, settings);
 
 		cv::Mat img_left_operated;
 		cv::Mat img_right_operated;
@@ -538,6 +591,7 @@ int main(int argc, char *argv[]) {
 
 		char key = static_cast<char>(cv::waitKey(1));
 
+		// capture one frame 
 		if (key == 'z' || key == 'Z') {  // z/Z
 			i++;
 			std::vector<cv::Point> pts;
@@ -546,6 +600,17 @@ int main(int argc, char *argv[]) {
 			std::cout << "captured: "<< pts.size() << std::endl;
 		}
 
+		// start video streaming
+		if (key == 'c' || key == 'C') {  // c/C
+			StartVideoStreaming(writer, img_left, settings);
+		}
+
+		// end video streamings
+		if (key == 'v' || key == 'V') {  // c/C
+			EndVideoStreaming(writer);
+		}
+		
+		// 
 		if (key == 27 || key == 'q' || key == 'Q') {  // ESC/Q		
 			std::cout << "stop" << std::endl;	
 			break;		
@@ -553,7 +618,11 @@ int main(int argc, char *argv[]) {
 		
 	}
 	
-	writer.release();
+	// release writer for security
+	if (writer.isOpened()) {
+		writer.release();
+	}
+
 	api->Stop(Source::VIDEO_STREAMING);
 	return 0;
 }
